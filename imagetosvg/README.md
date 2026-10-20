@@ -71,7 +71,9 @@ For a small *approximate* SVG of a photo, use brute force (or a smooth tracer). 
   over at any time.
 - **Preview**: pinch to zoom (pixels stay sharp), double-tap to reset, and hold the
   compare button to flip to the original.
-- **Save** the `.svg` anywhere (Downloads, Drive…) or **share** it to another app.
+- **Save** the `.svg` anywhere (Downloads, Drive…) or **share** it to another app. **Save as
+  .txt** writes the same SVG markup to a plain-text file, for apps and sites that only take
+  `.txt`.
 - Material 3 design with light/dark mode, using your wallpaper colours on Android 12+.
 
 ## Build from source

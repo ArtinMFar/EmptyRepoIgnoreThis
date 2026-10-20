@@ -14,6 +14,7 @@ import app.imagetosvg.image.LoadedImage
 import app.imagetosvg.trace.SvgCheck
 import app.imagetosvg.ui.AppViewModel
 import app.imagetosvg.ui.ExactState
+import app.imagetosvg.ui.FileType
 import app.imagetosvg.ui.Mode
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -65,6 +66,20 @@ class AppFlowTest {
         assertEquals(0, check.mismatched)
         assertTrue("antialiased edges give many colours", done.stats.colors > 50)
         assertEquals("sunset-logo.svg", vm.fileName(Mode.EXACT))
+    }
+
+    @Test
+    fun savingAsTextWritesTheSameSvg() {
+        show(TestImages.logo(128))
+        rule.waitFor(30_000, { "exact SVG, now ${vm.exact}" }) { vm.exact is ExactState.Done }
+        rule.onNodeWithText("Save as .txt").performScrollTo().assertIsEnabled()
+        assertEquals("sunset-logo.txt", vm.fileName(Mode.EXACT, FileType.TEXT))
+
+        val out = File(rule.activity.cacheDir, "saved.txt")
+        assertTrue(runBlocking { vm.saveTo(Uri.fromFile(out), Mode.EXACT) })
+        val svg = (vm.exact as ExactState.Done).file
+        assertArrayEquals(svg.readBytes(), out.readBytes())
+        assertTrue(out.readText().startsWith("<svg xmlns="))
     }
 
     @Test

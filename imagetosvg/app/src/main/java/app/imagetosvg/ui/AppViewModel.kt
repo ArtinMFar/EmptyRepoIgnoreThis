@@ -43,6 +43,13 @@ import java.io.IOException
 
 enum class Mode { EXACT, BRUTE_FORCE }
 
+/** How a result is saved. Both hold the same SVG markup. */
+enum class FileType(val extension: String, val mimeType: String) {
+    SVG("svg", "image/svg+xml"),
+    /** Plain text, for apps and sites that only take .txt files. */
+    TEXT("txt", "text/plain"),
+}
+
 class OpenImage(
     val image: LoadedImage,
     val preview: ImageBitmap,
@@ -349,9 +356,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Export -------------------------------------------------------------
 
-    fun fileName(m: Mode): String {
+    fun fileName(m: Mode, type: FileType = FileType.SVG): String {
         val name = current?.name ?: "image"
-        return if (m == Mode.EXACT) "$name.svg" else "$name-$shapeCount-shapes.svg"
+        val base = if (m == Mode.EXACT) name else "$name-$shapeCount-shapes"
+        return "$base.${type.extension}"
     }
 
     /** The SVG for [m] as a file in the app's cache, or null if there isn't one yet. */

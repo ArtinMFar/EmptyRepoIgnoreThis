@@ -3,6 +3,7 @@ package app.imagetosvg.ui
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
@@ -102,17 +104,23 @@ fun App(vm: AppViewModel) {
     val browse = { browseLauncher.launch(arrayOf("image/*")) }
 
     var saving by rememberSaveable { mutableStateOf(Mode.EXACT) }
-    val saveLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("image/svg+xml"),
-    ) { uri ->
+    fun saved(uri: Uri?, type: FileType) {
         if (uri != null) scope.launch {
             val ok = vm.saveTo(uri, saving)
-            snackbar.showSnackbar(if (ok) "Saved ${vm.fileName(saving)}" else "Couldn't save the file")
+            snackbar.showSnackbar(if (ok) "Saved ${vm.fileName(saving, type)}" else "Couldn't save the file")
         }
     }
-    val onSave = { m: Mode ->
+    // The picker's file type is fixed per launcher, so one each.
+    val saveSvgLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(FileType.SVG.mimeType),
+    ) { saved(it, FileType.SVG) }
+    val saveTextLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(FileType.TEXT.mimeType),
+    ) { saved(it, FileType.TEXT) }
+    val onSave = { m: Mode, type: FileType ->
         saving = m
-        saveLauncher.launch(vm.fileName(m))
+        val launcher = if (type == FileType.TEXT) saveTextLauncher else saveSvgLauncher
+        launcher.launch(vm.fileName(m, type))
     }
     val onShare = { m: Mode -> scope.launch { shareSvg(context, vm, m) }; Unit }
 
@@ -228,7 +236,7 @@ private fun ImageScreen(
     vm: AppViewModel,
     img: OpenImage,
     modifier: Modifier,
-    onSave: (Mode) -> Unit,
+    onSave: (Mode, FileType) -> Unit,
     onShare: (Mode) -> Unit,
 ) {
     Column(
@@ -294,7 +302,7 @@ private fun ImageScreen(
 }
 
 @Composable
-private fun ExactPanel(vm: AppViewModel, img: OpenImage, onSave: (Mode) -> Unit, onShare: (Mode) -> Unit) {
+private fun ExactPanel(vm: AppViewModel, img: OpenImage, onSave: (Mode, FileType) -> Unit, onShare: (Mode) -> Unit) {
     when (val state = vm.exact) {
         ExactState.Idle -> Button(onClick = vm::convertExact, modifier = Modifier.fillMaxWidth().height(52.dp)) {
             Text("Make exact SVG")
@@ -391,7 +399,7 @@ private fun ExactPanel(vm: AppViewModel, img: OpenImage, onSave: (Mode) -> Unit,
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BruteForcePanel(vm: AppViewModel, onSave: (Mode) -> Unit, onShare: (Mode) -> Unit) {
+private fun BruteForcePanel(vm: AppViewModel, onSave: (Mode, FileType) -> Unit, onShare: (Mode) -> Unit) {
     Text(
         "Tries random shapes and keeps each one that brings the drawing closer to the image. " +
             "It gets close quickly, but practically never becomes an exact copy: that's what Exact is for.",
@@ -499,10 +507,10 @@ private fun BruteForcePanel(vm: AppViewModel, onSave: (Mode) -> Unit, onShare: (
 }
 
 @Composable
-private fun SaveAndShare(m: Mode, enabled: Boolean, onSave: (Mode) -> Unit, onShare: (Mode) -> Unit) {
+private fun SaveAndShare(m: Mode, enabled: Boolean, onSave: (Mode, FileType) -> Unit, onShare: (Mode) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Button(
-            onClick = { onSave(m) },
+            onClick = { onSave(m, FileType.SVG) },
             enabled = enabled,
             modifier = Modifier.weight(1f).height(52.dp),
         ) {
@@ -519,6 +527,15 @@ private fun SaveAndShare(m: Mode, enabled: Boolean, onSave: (Mode) -> Unit, onSh
             Spacer(Modifier.width(8.dp))
             Text("Share")
         }
+    }
+    TextButton(
+        onClick = { onSave(m, FileType.TEXT) },
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+    ) {
+        Icon(Icons.Rounded.Description, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text("Save as .txt")
     }
 }
 
